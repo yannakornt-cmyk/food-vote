@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>โหวตเมนูอาหารกลางวันปีใหม่ 2569</title>
+    <title>Vote เมนูอาหารกลางวันปีใหม่ 2569</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -18,7 +18,7 @@
 <body class="bg-gray-50 min-h-screen pb-10">
 
     <div class="bg-orange-500 text-white p-4 shadow-md sticky top-0 z-50">
-        <h1 class="text-xl font-bold text-center">🍽️ โหวตเมนูอาหารกลางวันปีใหม่ 2569</h1>
+        <h1 class="text-xl font-bold text-center">🍽️ Vote เมนูอาหารกลางวันปีใหม่ 2569</h1>
         <p class="text-sm text-center text-orange-100" id="user-display">กำลังโหลดข้อมูลผู้ใช้...</p>
     </div>
 
@@ -73,11 +73,12 @@
                     title: `สวัสดีคุณ ${profile.displayName}`,
                     html: `
                         <div class="text-left mt-2">
-                            <p class="mb-2 text-gray-600">กรุณาโหวตอาหารงานปีใหม่ 2569</p>
+                            <p class="mb-2 text-gray-600">กรุณา Vote อาหารงานปีใหม่ 2569</p>
                             <p class="mb-2 text-gray-600">กรุณาอ่านกติกาดังนี้:</p>
                             <ul class="text-sm text-gray-700 space-y-2 list-disc pl-5 bg-orange-50 p-4 rounded-lg border border-orange-100">
                                 <li>สามารถเลือกรายการอาหารได้<br><b>มากสุด 2 รายการต่อประเภท</b></li>
-                                <li>ระบบจะ <b>ปิดให้โหวต</b> ในวันที่:<br><span class="text-red-500 font-bold">${data.closeTimeFormatted}</span></li>
+                                <li>ระบบจะ <b>ปิดให้ Vote</b> ในวันที่:<br><span class="text-red-500 font-bold">${data.closeTimeFormatted}</span></li>
+                                <li>ผลการ Vote แสดงที่นี่ หลังจากปิด Vote</li>
                             </ul>
                         </div>
                     `,
@@ -85,7 +86,7 @@
                     imageWidth: 80,
                     imageHeight: 80,
                     imageAlt: 'Profile',
-                    confirmButtonText: 'รับทราบ / เริ่มโหวต',
+                    confirmButtonText: 'รับทราบ / เริ่ม Vote',
                     confirmButtonColor: '#f97316', // สีส้มตามธีม
                     allowOutsideClick: false
                 });
@@ -277,6 +278,7 @@
 </script>
 </body>
 </html>
+
 
 
 
