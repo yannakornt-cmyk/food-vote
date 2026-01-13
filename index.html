@@ -172,49 +172,69 @@
     }
 
     async function submitVote() {
-        const totalSelected = Object.values(selections).flat().length;
-        if (totalSelected === 0) {
-            Swal.fire('แจ้งเตือน', 'กรุณาเลือกเมนูอย่างน้อย 1 รายการครับ', 'warning');
-            return;
-        }
+            // 1. ตรวจสอบว่าเลือกครบทุกหมวดหรือยัง
+            const allCategories = Object.keys(menuData);
+            const missingCategories = [];
 
-        const result = await Swal.fire({
-            title: 'ยืนยันการบันทึก?',
-            text: "ข้อมูลเก่าจะถูกทับด้วยข้อมูลใหม่นี้",
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'ยืนยัน',
-            cancelButtonText: 'ยกเลิก'
-        });
-
-        if (result.isConfirmed) {
-            Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
-            const payload = JSON.stringify({
-                userId: profile.userId,
-                displayName: profile.displayName,
-                selections: selections
+            allCategories.forEach(cat => {
+                // เช็คเฉพาะหมวดที่มีรายการอาหารให้เลือก
+                if (menuData[cat] && menuData[cat].length > 0) {
+                    const selectedInCat = selections[cat];
+                    // ถ้ายังไม่ได้เลือก หรือเลือกเป็น array ว่าง
+                    if (!selectedInCat || selectedInCat.length === 0) {
+                        missingCategories.push(cat);
+                    }
+                }
             });
 
-            try {
-                const res = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: payload
+            // 2. ถ้ามีหมวดที่ยังไม่ได้เลือก ให้แจ้งเตือนและบอกชื่อหมวด
+            if (missingCategories.length > 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'ยังเลือกไม่ครบทุกหมวด',
+                    html: `กรุณาเลือกเมนูอย่างน้อย 1 รายการในหมวด:<br><span class="text-red-500 font-bold">${missingCategories.join(', ')}</span>`,
+                    confirmButtonText: 'ตกลง'
                 });
-                const respData = await res.json();
+                return; // หยุดการทำงาน ไม่ส่งข้อมูล
+            }
 
-                if (respData.status === 'success') {
-                    await Swal.fire('สำเร็จ', respData.message, 'success');
-                    // ไม่ต้อง reload ก็ได้ แต่ reload เพื่อความชัวร์ว่าค่าเปลี่ยนแล้ว
-                    location.reload(); 
-                } else {
-                    Swal.fire('ผิดพลาด', respData.message, 'error');
+            // --- ส่วนการส่งข้อมูล (เหมือนเดิม) ---
+            const result = await Swal.fire({
+                title: 'ยืนยันการบันทึก?',
+                text: "ข้อมูลเก่าจะถูกทับด้วยข้อมูลใหม่นี้",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'ยืนยัน',
+                cancelButtonText: 'ยกเลิก'
+            });
+
+            if (result.isConfirmed) {
+                Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+                const payload = JSON.stringify({
+                    userId: profile.userId,
+                    displayName: profile.displayName,
+                    selections: selections
+                });
+
+                try {
+                    const res = await fetch(GAS_URL, {
+                        method: 'POST',
+                        body: payload
+                    });
+                    const respData = await res.json();
+
+                    if (respData.status === 'success') {
+                        await Swal.fire('สำเร็จ', respData.message, 'success');
+                        location.reload(); 
+                    } else {
+                        Swal.fire('ผิดพลาด', respData.message, 'error');
+                    }
+                } catch (error) {
+                    Swal.fire('Error', 'บันทึกข้อมูลไม่สำเร็จ', 'error');
                 }
-            } catch (error) {
-                Swal.fire('Error', 'บันทึกข้อมูลไม่สำเร็จ', 'error');
             }
         }
-    }
 
     function showClosedResults(results) {
         document.getElementById('voting-form').style.display = 'none';
@@ -240,5 +260,6 @@
 </script>
 </body>
 </html>
+
 
 
