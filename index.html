@@ -40,207 +40,204 @@
     </div>
 
     <script>
-        // --- CONFIG ---
-        const LIFF_ID = "2008873864-VbOip62x"; // ใส่ LIFF ID ของคุณที่นี่
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbxm_8hlDz4fjyEhOWVe4V0_Wy9nGnBwKaVVUV3vZwcLlB3_bB_QCUXJbtna5fEBazBISg/exec"; // ใส่ Web App URL ที่ได้จากขั้นตอนที่แล้ว
+    // --- CONFIG ---
+    const LIFF_ID = "2008873864-VbOip62x"; 
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbxm_8hlDz4fjyEhOWVe4V0_Wy9nGnBwKaVVUV3vZwcLlB3_bB_QCUXJbtna5fEBazBISg/exec"; 
 
-        let profile = null;
-        let menuData = {};
-        let selections = {}; // { "แกงต้มจืด": ["A", "B"] }
-        let currentCategory = "";
+    let profile = null;
+    let menuData = {};
+    let selections = {}; 
+    let currentCategory = "";
 
-        // --- INIT ---
-        async function main() {
-            Swal.fire({ title: 'กำลังโหลด...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-            
-            try {
-                await liff.init({ liffId: LIFF_ID });
-                if (!liff.isLoggedIn()) {
-                    liff.login();
-                    return;
-                }
-                profile = await liff.getProfile();
-                document.getElementById('user-display').innerText = `สวัสดี, ${profile.displayName}`;
-
-                // Fetch Data from GAS
-                const response = await fetch(`${GAS_URL}?op=getData&userId=${profile.userId}`);
-                const data = await response.json();
-                
-                Swal.close();
-                document.getElementById('app').classList.remove('hidden');
-
-                if (data.status === 'open') {
-                    menuData = data.menus;
-                    renderTabs();
-                    // Select first category by default
-                    switchCategory(Object.keys(menuData)[0]);
-                } else if (data.status === 'closed') {
-                    showClosedResults(data.results);
-                } else if (data.status === 'voted') {
-                    showStatusMessage("✅ คุณได้ทำการโหวตเรียบร้อยแล้ว", "ขอบคุณที่ร่วมกิจกรรมครับ");
-                }
-
-            } catch (err) {
-                Swal.fire('Error', 'เกิดข้อผิดพลาด: ' + err.message, 'error');
-            }
-        }
-
-        // --- RENDER LOGIC ---
-        function renderTabs() {
-            const container = document.getElementById('category-tabs');
-            container.innerHTML = Object.keys(menuData).map(cat => `
-                <button onclick="switchCategory('${cat}')" 
-                    class="tab-btn px-4 py-2 whitespace-nowrap bg-white rounded-full shadow-sm text-gray-600 text-sm transition" 
-                    id="tab-${cat}">
-                    ${cat}
-                </button>
-            `).join('');
-        }
-
-        function switchCategory(cat) {
-            currentCategory = cat;
-            
-            // Update Tabs Style
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('bg-orange-500', 'text-white');
-                btn.classList.add('bg-white', 'text-gray-600');
-            });
-            const activeTab = document.getElementById(`tab-${cat}`);
-            if(activeTab) {
-                activeTab.classList.remove('bg-white', 'text-gray-600');
-                activeTab.classList.add('bg-orange-500', 'text-white');
-            }
-
-            // Render Items
-            const list = menuData[cat];
-            const container = document.getElementById('menu-container');
-            
-            if (list.length === 0) {
-                container.innerHTML = `<div class="text-center text-gray-400 py-10">ไม่พบรายการในหมวดนี้</div>`;
+    async function main() {
+        Swal.fire({ title: 'กำลังโหลด...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        
+        try {
+            await liff.init({ liffId: LIFF_ID });
+            if (!liff.isLoggedIn()) {
+                liff.login();
                 return;
             }
+            profile = await liff.getProfile();
+            document.getElementById('user-display').innerText = `สวัสดี, ${profile.displayName}`;
 
-            container.innerHTML = list.map((item, index) => {
-                const isSelected = (selections[cat] || []).includes(item.name);
-                return `
-                <div onclick="toggleSelect('${item.name}')" 
-                     class="cursor-pointer bg-white p-4 rounded-xl shadow flex items-center justify-between transition ${isSelected ? 'card-selected' : ''}"
-                     id="card-${index}">
-                    <div>
-                        <h3 class="font-bold text-gray-800">${item.name}</h3>
-                        <p class="text-xs text-gray-500">${item.desc || ''}</p>
-                    </div>
-                    <div class="h-6 w-6 rounded-full border-2 border-gray-300 flex items-center justify-center ${isSelected ? 'bg-green-500 border-green-500' : ''}">
-                        ${isSelected ? '<span class="text-white text-xs">✓</span>' : ''}
+            const response = await fetch(`${GAS_URL}?op=getData&userId=${profile.userId}`);
+            const data = await response.json();
+            
+            Swal.close();
+            document.getElementById('app').classList.remove('hidden');
+
+            if (data.status === 'open') {
+                menuData = data.menus;
+                
+                // --- ส่วนที่เพิ่มเข้ามา: เช็คว่าเคยเลือกไว้ไหม ---
+                if (data.previousSelections) {
+                    selections = data.previousSelections;
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'คุณเคยโหวตแล้ว',
+                        text: 'ระบบดึงข้อมูลเดิมมาให้ คุณสามารถแก้ไขและกดบันทึกใหม่ได้ครับ',
+                        timer: 2000
+                    });
+                    // เปลี่ยนปุ่มเป็น "แก้ไข" เพื่อความเข้าใจง่าย
+                    document.querySelector('#voting-form button').innerText = "บันทึกการแก้ไข";
+                    document.querySelector('#voting-form button').classList.replace('bg-green-500', 'bg-blue-500');
+                    document.querySelector('#voting-form button').classList.replace('hover:bg-green-600', 'hover:bg-blue-600');
+                }
+                // ------------------------------------------
+
+                renderTabs();
+                switchCategory(Object.keys(menuData)[0]);
+
+            } else if (data.status === 'closed') {
+                showClosedResults(data.results);
+            }
+        } catch (err) {
+            Swal.fire('Error', 'เกิดข้อผิดพลาด: ' + err.message, 'error');
+        }
+    }
+
+    // --- ส่วนอื่นๆ เหมือนเดิม ---
+    function renderTabs() {
+        const container = document.getElementById('category-tabs');
+        container.innerHTML = Object.keys(menuData).map(cat => `
+            <button onclick="switchCategory('${cat}')" 
+                class="tab-btn px-4 py-2 whitespace-nowrap bg-white rounded-full shadow-sm text-gray-600 text-sm transition" 
+                id="tab-${cat}">
+                ${cat}
+            </button>
+        `).join('');
+    }
+
+    function switchCategory(cat) {
+        currentCategory = cat;
+        
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('bg-orange-500', 'text-white');
+            btn.classList.add('bg-white', 'text-gray-600');
+        });
+        const activeTab = document.getElementById(`tab-${cat}`);
+        if(activeTab) {
+            activeTab.classList.remove('bg-white', 'text-gray-600');
+            activeTab.classList.add('bg-orange-500', 'text-white');
+        }
+
+        const list = menuData[cat];
+        const container = document.getElementById('menu-container');
+        
+        if (list.length === 0) {
+            container.innerHTML = `<div class="text-center text-gray-400 py-10">ไม่พบรายการในหมวดนี้</div>`;
+            return;
+        }
+
+        container.innerHTML = list.map((item, index) => {
+            const isSelected = (selections[cat] || []).includes(item.name);
+            return `
+            <div onclick="toggleSelect('${item.name}')" 
+                 class="cursor-pointer bg-white p-4 rounded-xl shadow flex items-center justify-between transition ${isSelected ? 'card-selected' : ''}"
+                 id="card-${index}">
+                <div>
+                    <h3 class="font-bold text-gray-800">${item.name}</h3>
+                    <p class="text-xs text-gray-500">${item.desc || ''}</p>
+                </div>
+                <div class="h-6 w-6 rounded-full border-2 border-gray-300 flex items-center justify-center ${isSelected ? 'bg-green-500 border-green-500' : ''}">
+                    ${isSelected ? '<span class="text-white text-xs">✓</span>' : ''}
+                </div>
+            </div>
+        `}).join('');
+    }
+
+    function toggleSelect(itemName) {
+        if (!selections[currentCategory]) selections[currentCategory] = [];
+        
+        const list = selections[currentCategory];
+        const index = list.indexOf(itemName);
+
+        if (index > -1) {
+            list.splice(index, 1); 
+        } else {
+            if (list.length >= 2) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'ครบโควต้าแล้ว',
+                    text: 'เลือกได้สูงสุด 2 รายการต่อหมวดหมู่ครับ',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+                return;
+            }
+            list.push(itemName);
+        }
+        switchCategory(currentCategory);
+    }
+
+    async function submitVote() {
+        const totalSelected = Object.values(selections).flat().length;
+        if (totalSelected === 0) {
+            Swal.fire('แจ้งเตือน', 'กรุณาเลือกเมนูอย่างน้อย 1 รายการครับ', 'warning');
+            return;
+        }
+
+        const result = await Swal.fire({
+            title: 'ยืนยันการบันทึก?',
+            text: "ข้อมูลเก่าจะถูกทับด้วยข้อมูลใหม่นี้",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'ยืนยัน',
+            cancelButtonText: 'ยกเลิก'
+        });
+
+        if (result.isConfirmed) {
+            Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+            const payload = JSON.stringify({
+                userId: profile.userId,
+                displayName: profile.displayName,
+                selections: selections
+            });
+
+            try {
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: payload
+                });
+                const respData = await res.json();
+
+                if (respData.status === 'success') {
+                    await Swal.fire('สำเร็จ', respData.message, 'success');
+                    // ไม่ต้อง reload ก็ได้ แต่ reload เพื่อความชัวร์ว่าค่าเปลี่ยนแล้ว
+                    location.reload(); 
+                } else {
+                    Swal.fire('ผิดพลาด', respData.message, 'error');
+                }
+            } catch (error) {
+                Swal.fire('Error', 'บันทึกข้อมูลไม่สำเร็จ', 'error');
+            }
+        }
+    }
+
+    function showClosedResults(results) {
+        document.getElementById('voting-form').style.display = 'none';
+        const statusDiv = document.getElementById('status-message');
+        statusDiv.classList.remove('hidden');
+        
+        let html = `<h2 class="text-2xl font-bold text-gray-800 mb-6">🏆 ผลโหวตเมนูยอดนิยม</h2>`;
+        for (const [cat, data] of Object.entries(results)) {
+            html += `
+                <div class="bg-orange-50 p-4 rounded-lg mb-4 text-left border border-orange-200">
+                    <h3 class="font-bold text-orange-600">${cat}</h3>
+                    <div class="flex justify-between items-center mt-2">
+                        <span class="text-gray-800 text-lg">${data.item}</span>
+                        <span class="bg-orange-500 text-white px-2 py-1 rounded text-xs">${data.score} คะแนน</span>
                     </div>
                 </div>
-            `}).join('');
-        }
-
-        function toggleSelect(itemName) {
-            if (!selections[currentCategory]) selections[currentCategory] = [];
-            
-            const list = selections[currentCategory];
-            const index = list.indexOf(itemName);
-
-            if (index > -1) {
-                list.splice(index, 1); // Deselect
-            } else {
-                if (list.length >= 2) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'ครบโควต้าแล้ว',
-                        text: 'เลือกได้สูงสุด 2 รายการต่อหมวดหมู่ครับ',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
-                    return;
-                }
-                list.push(itemName); // Select
-            }
-            switchCategory(currentCategory); // Re-render
-        }
-
-        async function submitVote() {
-            // Check if at least one item is selected
-            const totalSelected = Object.values(selections).flat().length;
-            if (totalSelected === 0) {
-                Swal.fire('แจ้งเตือน', 'กรุณาเลือกเมนูอย่างน้อย 1 รายการครับ', 'warning');
-                return;
-            }
-
-            const result = await Swal.fire({
-                title: 'ยืนยันการโหวต?',
-                text: "เมื่อยืนยันแล้วจะไม่สามารถแก้ไขได้",
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'ยืนยัน',
-                cancelButtonText: 'ยกเลิก'
-            });
-
-            if (result.isConfirmed) {
-                Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
-                // Send POST to GAS (Use text/plain to avoid CORS Preflight issues in GAS)
-                const payload = JSON.stringify({
-                    userId: profile.userId,
-                    displayName: profile.displayName,
-                    selections: selections
-                });
-
-                try {
-                    const res = await fetch(GAS_URL, {
-                        method: 'POST',
-                        body: payload
-                    });
-                    const respData = await res.json();
-
-                    if (respData.status === 'success') {
-                        await Swal.fire('สำเร็จ', respData.message, 'success');
-                        location.reload(); // Reload to show voted status
-                    } else {
-                        Swal.fire('ผิดพลาด', respData.message, 'error');
-                    }
-                } catch (error) {
-                    Swal.fire('Error', 'บันทึกข้อมูลไม่สำเร็จ', 'error');
-                }
-            }
-        }
-
-        function showStatusMessage(title, subtitle) {
-            document.getElementById('voting-form').style.display = 'none';
-            const statusDiv = document.getElementById('status-message');
-            statusDiv.classList.remove('hidden');
-            statusDiv.innerHTML = `
-                <div class="text-6xl mb-4">🎉</div>
-                <h2 class="text-2xl font-bold text-gray-800">${title}</h2>
-                <p class="text-gray-500 mt-2">${subtitle}</p>
             `;
         }
+        statusDiv.innerHTML = html;
+    }
 
-        function showClosedResults(results) {
-            document.getElementById('voting-form').style.display = 'none';
-            const statusDiv = document.getElementById('status-message');
-            statusDiv.classList.remove('hidden');
-            
-            let html = `<h2 class="text-2xl font-bold text-gray-800 mb-6">🏆 ผลโหวตเมนูยอดนิยม</h2>`;
-            
-            for (const [cat, data] of Object.entries(results)) {
-                html += `
-                    <div class="bg-orange-50 p-4 rounded-lg mb-4 text-left border border-orange-200">
-                        <h3 class="font-bold text-orange-600">${cat}</h3>
-                        <div class="flex justify-between items-center mt-2">
-                            <span class="text-gray-800 text-lg">${data.item}</span>
-                            <span class="bg-orange-500 text-white px-2 py-1 rounded text-xs">${data.score} คะแนน</span>
-                        </div>
-                    </div>
-                `;
-            }
-            statusDiv.innerHTML = html;
-        }
-
-        // Start
-        main();
-    </script>
+    main();
+</script>
 </body>
 </html>
+
