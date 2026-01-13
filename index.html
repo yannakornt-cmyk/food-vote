@@ -64,28 +64,44 @@
             const response = await fetch(`${GAS_URL}?op=getData&userId=${profile.userId}`);
             const data = await response.json();
             
-            Swal.close();
-            document.getElementById('app').classList.remove('hidden');
+            Swal.close(); // ปิด Loading เดิมก่อน
 
             if (data.status === 'open') {
+                
+                // --- ส่วนที่เพิ่ม: SweetAlert ต้อนรับและแจ้งกติกา ---
+                await Swal.fire({
+                    title: `สวัสดีคุณ ${profile.displayName}`,
+                    html: `
+                        <div class="text-left mt-2">
+                            <p class="mb-2 text-gray-600">ยินดีต้อนรับสู่ระบบโหวตอาหาร กรุณาอ่านกติกาดังนี้:</p>
+                            <ul class="text-sm text-gray-700 space-y-2 list-disc pl-5 bg-orange-50 p-4 rounded-lg border border-orange-100">
+                                <li>สามารถเลือกรายการอาหารได้<br><b>มากสุด 2 รายการต่อประเภท</b></li>
+                                <li>ระบบจะ <b>ปิดให้โหวต</b> ในวันที่:<br><span class="text-red-500 font-bold">${data.closeTimeFormatted}</span></li>
+                            </ul>
+                        </div>
+                    `,
+                    imageUrl: profile.pictureUrl, // โชว์รูปโปรไฟล์ไลน์ (ถ้ามี)
+                    imageWidth: 80,
+                    imageHeight: 80,
+                    imageAlt: 'Profile',
+                    confirmButtonText: 'รับทราบ / เริ่มโหวต',
+                    confirmButtonColor: '#f97316', // สีส้มตามธีม
+                    allowOutsideClick: false
+                });
+                // ------------------------------------------------
+
                 menuData = data.menus;
                 
-                // --- ส่วนที่เพิ่มเข้ามา: เช็คว่าเคยเลือกไว้ไหม ---
+                // เช็คว่าเคยโหวตไหม (Code เดิม)
                 if (data.previousSelections) {
                     selections = data.previousSelections;
-                    Swal.fire({
-                        icon: 'info',
-                        title: 'คุณเคยโหวตแล้ว',
-                        text: 'ระบบดึงข้อมูลเดิมมาให้ คุณสามารถแก้ไขและกดบันทึกใหม่ได้ครับ',
-                        timer: 2000
-                    });
-                    // เปลี่ยนปุ่มเป็น "แก้ไข" เพื่อความเข้าใจง่าย
+                    // ... (Logic แสดงปุ่มแก้ไขเหมือนเดิม) ...
                     document.querySelector('#voting-form button').innerText = "บันทึกการแก้ไข";
                     document.querySelector('#voting-form button').classList.replace('bg-green-500', 'bg-blue-500');
                     document.querySelector('#voting-form button').classList.replace('hover:bg-green-600', 'hover:bg-blue-600');
                 }
-                // ------------------------------------------
 
+                document.getElementById('app').classList.remove('hidden');
                 renderTabs();
                 switchCategory(Object.keys(menuData)[0]);
 
@@ -260,6 +276,7 @@
 </script>
 </body>
 </html>
+
 
 
 
